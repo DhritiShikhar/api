@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -242,4 +243,26 @@ type CatalogSourceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []CatalogSource `json:"items"`
+}
+
+// UnmarshalJSON implements the encoding/json.Unmarshaler interface.
+func (u *UpdateStrategy) UnmarshalJSON(data []byte) (err error) {
+	var updateStrategyMap map[string]map[string]string
+	if err = json.Unmarshal(data, &updateStrategyMap); err != nil {
+		return err
+	}
+	registryPoll := &RegistryPoll{}
+	duration, err := time.ParseDuration(updateStrategyMap["registryPoll"]["interval"])
+	if err != nil {
+		err = nil
+		defaultTime, err := time.ParseDuration("15m")
+		if err != nil {
+			return err
+		}
+		registryPoll.Interval = &metav1.Duration{Duration: defaultTime}
+	} else {
+		registryPoll.Interval = &metav1.Duration{Duration: duration}
+	}
+	u.RegistryPoll = registryPoll
+	return nil
 }
